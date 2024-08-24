@@ -38,6 +38,10 @@ public class DefaultBandwidthStatus implements BandwidthStatus{
 	@Override
 	public void log(long speed, String additionalInfo) throws IOException {
 		additionalInfo = additionalInfo.replace(System.lineSeparator(), " ");
+
+		File outputDstFile = new File(outputDst);
+		if (!outputDstFile.exists()) outputDstFile.createNewFile();
+
 		StringBuilder buffer;
 		try (
 			BufferedReader br = new BufferedReader(new FileReader(outputDst))
