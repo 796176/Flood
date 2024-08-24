@@ -25,11 +25,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 /**
- * Graphic draws the given records. The amount of displayed records is based on the width.
+ * Graph draws the given records. The amount of displayed records is based on the width.
  */
-class Graphic extends JPanel {
+class Graph extends JPanel {
 	private final FRecord[] records;
-	Graphic(FRecord[] records, int width, int height){
+	Graph(FRecord[] records, int width, int height){
 		setMinimumSize(new Dimension(width, height));
 		setPreferredSize(new Dimension(width, height));
 		setMaximumSize(new Dimension(width, height));
