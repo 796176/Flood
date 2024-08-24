@@ -30,7 +30,7 @@ import java.io.IOException;
  */
 public class MainFrame extends JFrame {
 	private FRecord[] records = new FRecord[]{};
-	private Container prevGraphic;
+	private Container prevGraph;
 	public MainFrame() {
 		try {
 			setSize(
@@ -63,18 +63,18 @@ public class MainFrame extends JFrame {
 
 		setJMenuBar(new MainFrameMenu(this));
 
-		prevGraphic = new JLabel("Use Tools > Update to draw the graphic");
-		add(prevGraphic);
+		prevGraph = new JLabel("Use Tools > Update to draw the graph");
+		add(prevGraph);
 		setVisible(true);
 
 		addComponentListener(new ComponentAdapter() {
 			@Override
 			public void componentResized(ComponentEvent e) {
 				if (records.length > 0) {
-					Graphic newGraphic = new Graphic(records, getWidth(), getHeight());
-					prevGraphic.setVisible(false);
-					MainFrame.this.add(newGraphic);
-					prevGraphic = newGraphic;
+					Graph newGraph = new Graph(records, getWidth(), getHeight());
+					prevGraph.setVisible(false);
+					MainFrame.this.add(newGraph);
+					prevGraph = newGraph;
 					repaint(100);
 				}
 			}
@@ -108,12 +108,12 @@ public class MainFrame extends JFrame {
 	public void setRecords(FRecord[] records) {
 		assert records != null;
 
-		Graphic graphic = new Graphic(records,
+		Graph graph = new Graph(records,
 			getWidth() - getInsets().left - getInsets().right,
 			getHeight() - getInsets().top - getInsets().bottom - getJMenuBar().getHeight());
-		prevGraphic.setVisible(false);
-		add(graphic);
-		prevGraphic = graphic;
+		prevGraph.setVisible(false);
+		add(graph);
+		prevGraph = graph;
 		this.records = records;
 		repaint();
 	}
