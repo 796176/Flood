@@ -25,7 +25,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.swing.*;
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -62,24 +61,30 @@ public class UpdateDialog extends JDialog{
 	void updateRequest(RequestType rt, String params) {
 		assert rt != null && params != null;
 
-		try {
-			URI uri = URI.create(
-				SettingManipulator.getValue(SettingManipulator.Parameter.REMOTE_URL).orElse("") + "/" + rt + params
-			);
+		CancelDialog cancelDialog = new CancelDialog(parent);
+		Retrieve retrieve = new Retrieve(rt, params, cancelDialog);
+		retrieve.start();
+		cancelDialog.setRunnableThread(retrieve);
+		setVisible(false);
+		cancelDialog.setVisible(true);
+		if (retrieve.isInterrupted()) return;
 
-			HttpClient client = HttpClient.newBuilder().build();
-			HttpRequest request =
-				HttpRequest.newBuilder().uri(uri).timeout(Duration.of(15, ChronoUnit.SECONDS)).build();
-			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-			if (response.statusCode() != 200) {
-				JOptionPane.showMessageDialog(
-					this,
-					"Server status: " + response.statusCode(),
-					"NetworkException",
-					JOptionPane.ERROR_MESSAGE
-				);
-			}
-			JSONObject object = new JSONObject(response.body());
+		if (retrieve.getException() != null) {
+			JOptionPane.showMessageDialog(
+				this,
+				retrieve.getException().getMessage(),
+				retrieve.exception.getClass().getSimpleName(),
+				JOptionPane.ERROR_MESSAGE
+			);
+		} else if (retrieve.getResult().statusCode() != 200) {
+			JOptionPane.showMessageDialog(
+				this,
+				"Server status: " + retrieve.getResult().statusCode(),
+				"NetworkException",
+				JOptionPane.ERROR_MESSAGE
+			);
+		} else {
+			JSONObject object = new JSONObject(retrieve.getResult().body());
 			JSONArray records = object.getJSONArray("records");
 			ArrayList<FRecord> recordsArrayList = new ArrayList<>(1024 * 10);
 			for (int i = 0; i < records.length(); i++) {
@@ -93,20 +98,50 @@ public class UpdateDialog extends JDialog{
 			FRecord[] recordsArray = recordsArrayList.toArray(new FRecord[]{});
 			Arrays.sort(recordsArray);
 			parent.setRecords(recordsArray);
-		} catch (IOException exception) {
-			JOptionPane.showMessageDialog(
-				this,
-				exception.getMessage(),
-				"IOException",
-				JOptionPane.ERROR_MESSAGE
-			);
-		} catch (InterruptedException exception) {
-			JOptionPane.showMessageDialog(
-				this,
-				exception.getMessage(),
-				"InterruptedException",
-				JOptionPane.ERROR_MESSAGE
-			);
+		}
+	}
+
+	private static class Retrieve extends Thread {
+		private final RequestType requestType;
+		private final String parameters;
+		private final JDialog cancelDialog;
+		private HttpResponse<String> result;
+		private Exception exception;
+		private Retrieve(RequestType rt, String params, JDialog cancelDialog) {
+			assert rt != null && params != null && cancelDialog != null;
+
+			requestType = rt;
+			parameters = params;
+			this.cancelDialog = cancelDialog;
+		}
+
+		@Override
+		public void run() {
+			try {
+				URI uri = URI.create(
+					SettingManipulator.getValue(SettingManipulator.Parameter.REMOTE_URL).orElse("") +
+					"/" +
+					requestType +
+					parameters
+				);
+				HttpClient client = HttpClient.newBuilder().build();
+				HttpRequest request =
+					HttpRequest.newBuilder().uri(uri).timeout(Duration.of(15, ChronoUnit.SECONDS)).build();
+				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+				result = response;
+			} catch (Exception e) {
+				exception = e;
+			} finally {
+				cancelDialog.setVisible(false);
+			}
+		}
+
+		private HttpResponse<String> getResult() {
+			return result;
+		}
+
+		private Exception getException() {
+			return exception;
 		}
 	}
 }
