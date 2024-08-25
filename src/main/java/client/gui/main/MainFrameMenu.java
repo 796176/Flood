@@ -39,11 +39,11 @@ class MainFrameMenu extends JMenuBar {
 		add(tools);
 
 		JMenu options = new JMenu("Options");
-		options.setPopupMenuVisible(false);
-		options.setSelected(false);
 		options.addMouseListener(new MouseAdapter() {
 			@Override
-			public void mouseClicked(MouseEvent e) {
+			public void mousePressed(MouseEvent mouseEvent) {
+				JMenu menu = (JMenu) mouseEvent.getSource();
+				menu.setSelected(false);
 				new SettingsDialog(parent);
 			}
 		});
@@ -52,7 +52,9 @@ class MainFrameMenu extends JMenuBar {
 		JMenu aboutMenu = new JMenu("About");
 		aboutMenu.addMouseListener(new MouseAdapter() {
 			@Override
-			public void mouseClicked(MouseEvent e) {
+			public void mousePressed(MouseEvent mouseEvent) {
+				JMenu menu = (JMenu) mouseEvent.getSource();
+				menu.setSelected(false);
 				new AboutDialog(parent);
 			}
 		});
