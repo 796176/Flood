@@ -43,8 +43,8 @@ class UpdateContentPane extends JTabbedPane {
 		});
 		parameters.setSelectedItem(null);
 		parameters.addItemListener(itemEvent -> {
-
 			if (itemEvent.getStateChange() == ItemEvent.SELECTED) {
+				parameters.setPopupVisible(false);
 				updateDialog.updateRequest(RequestType.retrieve_last, ((UserChoice) itemEvent.getItem()).params);
 			}
 		});
