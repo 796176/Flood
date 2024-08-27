@@ -71,7 +71,12 @@ public class MainFrame extends JFrame {
 			@Override
 			public void componentResized(ComponentEvent e) {
 				if (records.length > 0) {
-					Graph newGraph = new Graph(records, getWidth(), getHeight());
+					Graph newGraph =
+						new Graph(
+							records,
+							getWidth() - getInsets().right - getInsets().left,
+							getHeight() - getInsets().top - getInsets().bottom - getJMenuBar().getHeight()
+						);
 					prevGraph.setVisible(false);
 					MainFrame.this.add(newGraph);
 					prevGraph = newGraph;

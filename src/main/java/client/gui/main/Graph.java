@@ -29,6 +29,12 @@ import java.util.Comparator;
  */
 class Graph extends JPanel {
 	private final FRecord[] records;
+	protected double barWidth;
+	protected double gapWidth;
+	protected int leftOffset = 0;
+	protected int rightOffset;
+	protected int topOffset = 0;
+	protected int bottomOffset;
 	Graph(FRecord[] records, int width, int height){
 		setMinimumSize(new Dimension(width, height));
 		setPreferredSize(new Dimension(width, height));
@@ -50,9 +56,9 @@ class Graph extends JPanel {
 		gc.setFont(new Font(Font.SERIF, Font.BOLD, 18));
 
 		int barMinWidth = 15;
-		int barMinOffset = 10;
-		int rightOffset = gc.getFontMetrics().stringWidth("   999 Mbit/s");
-		int maxSpeedBarsAmount = (getWidth() - rightOffset + barMinOffset) / (barMinWidth + barMinOffset);
+		int gapMinWidth = 10;
+		rightOffset = gc.getFontMetrics().stringWidth("   999 Mbit/s");
+		int maxSpeedBarsAmount = (getWidth() - rightOffset + gapMinWidth) / (barMinWidth + gapMinWidth);
 
 		FRecord[] visibleRecords =
 			records.length > maxSpeedBarsAmount ?
@@ -71,40 +77,48 @@ class Graph extends JPanel {
 		// for example for maxSpeed 537 highestBar is 600
 		long highestBar = (long) (Math.ceil((double) maxSpeed / maxSpeedExponent) * maxSpeedExponent);
 
-		double scaleY = (double) getHeight() / highestBar;
-		drawSpeedBars(gc, lowestBar, highestBar, scaleY);
+		visibleRecords = Arrays
+			.stream(visibleRecords)
+			.map(r -> new FRecord(r.time(), r.speed() - lowestBar, r.info()))
+			.toArray(FRecord[]::new);
+		double scaleY = (double) getHeight() / (highestBar - lowestBar);
+		drawSpeedBars(gc, lowestBar, highestBar);
 
 		double scaleX = (double) maxSpeedBarsAmount / visibleRecords.length;
-		drawRecordBars(gc, visibleRecords, barMinWidth * scaleX, barMinOffset * scaleX, scaleY);
+		barWidth = barMinWidth * scaleX;
+		gapWidth = gapMinWidth * scaleX;
+		drawRecordBars(gc, visibleRecords, scaleY);
 	}
 
-	private void drawSpeedBars(Graphics gc, long lowestBar, long highestBar, double scaleY) {
-		gc.setColor(Color.gray);
+	private void drawSpeedBars(Graphics gc, long lowestBar, long highestBar) {
 		FontMetrics fm = gc.getFontMetrics();
-		gc.fillRect(0, 0, getWidth(), 4);
-		gc.fillRect(0, (int) (getHeight() - lowestBar * scaleY), getWidth(), 4);
+		bottomOffset = fm.getHeight();
+		int barAmount = 5;
+		int barWidth = 4;
+		int currentHeight = 0;
+		long currentSpeed = highestBar;
+		for (int i = 0; i < barAmount; i++) {
+			gc.setColor(Color.gray);
+			gc.fillRect(0, currentHeight, getWidth(), barWidth);
 
-		gc.setColor(Color.white);
-		String highText = highestBar / 1_000_000 + " Mbit/s";
-		gc.drawString(
-			highText,
-			getWidth() - gc.getFontMetrics().stringWidth(highText),
-			fm.getHeight()
-		);
+			gc.setColor(Color.white);
+			String text = human(currentSpeed);
+			gc.drawString(
+				text,
+				getWidth() - gc.getFontMetrics().stringWidth(text),
+				currentHeight + gc.getFontMetrics().getHeight()
+			);
 
-		String lowText = lowestBar / 1_000_000 + " Mbit/s";
-		gc.drawString(
-			lowText,
-			getWidth() - gc.getFontMetrics().stringWidth(lowText),
-			(int) (getHeight() - lowestBar * scaleY + gc.getFontMetrics().getHeight())
-		);
+			currentHeight += (getHeight() - barWidth - bottomOffset) / (barAmount - 1);
+			currentSpeed -= (highestBar - lowestBar) / (barAmount - 1);
+		}
 	}
 
-	private void drawRecordBars(Graphics gc, FRecord[] records, double barWidth, double barOffsetWidth, double scaleY) {
+	private void drawRecordBars(Graphics gc, FRecord[] records, double scaleY) {
 		gc.setColor(Color.red);
 		for (int recordIndex = 0; recordIndex < records.length; recordIndex++) {
 			int height = (int) (records[recordIndex].speed() * scaleY);
-			int xPos = (int) (recordIndex * barWidth + recordIndex * barOffsetWidth);
+			int xPos = (int) (recordIndex * barWidth + recordIndex * gapWidth);
 			int yPos = getHeight() - height;
 			gc.fillRect(xPos, yPos, (int) barWidth, height);
 		}
@@ -131,5 +145,14 @@ class Graph extends JPanel {
 		}
 
 		return smearedRecs;
+	}
+
+	private String human(long bits) {
+		int siPrefix = 0;
+		while (bits >= 1000) {
+			bits /= 1000;
+			siPrefix++;
+		}
+		return bits + " " + " KMG".charAt(siPrefix) + "bits/s";
 	}
 }
