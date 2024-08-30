@@ -70,6 +70,7 @@ public class UpdateDialog extends JDialog{
 		if (retrieve.isInterrupted()) return;
 
 		if (retrieve.getException() != null) {
+			retrieve.getException().printStackTrace();
 			JOptionPane.showMessageDialog(
 				this,
 				retrieve.getException().getMessage(),
@@ -132,7 +133,9 @@ public class UpdateDialog extends JDialog{
 			} catch (Exception e) {
 				exception = e;
 			} finally {
-				cancelDialog.setVisible(false);
+				SwingUtilities.invokeLater(() -> {
+					cancelDialog.setVisible(false);
+				});
 			}
 		}
 

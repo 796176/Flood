@@ -23,8 +23,12 @@ import com.formdev.flatlaf.FlatDarkLaf;
 import javax.swing.*;
 
 public class Main {
-	public static void main(String[] args) throws Exception {
-		UIManager.setLookAndFeel(new FlatDarkLaf());
-		new MainFrame();
+	public static void main(String[] args) {
+		SwingUtilities.invokeLater(() -> {
+			try {
+				UIManager.setLookAndFeel(new FlatDarkLaf());
+				new MainFrame();
+			} catch (Exception ignored) {}
+		});
 	}
 }
