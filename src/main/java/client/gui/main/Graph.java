@@ -33,6 +33,13 @@ import java.util.Date;
  * Graph draws the given records. The amount of displayed records is based on the width.
  */
 class Graph extends JPanel {
+	/**
+	 * Stores the information about the bar shown on the screen.
+	 * @param time time to be shown when the bar is pointed at
+	 * @param speed speed to be shown when the bar is pointed at
+	 * @param coord coordinates of the shown bar
+	 * @param info addition information to be shown when the bar is pointed at
+	 */
 	protected record Bar(String time, String speed, Rectangle coord, String info) {}
 
 	private final FRecord[] records;
@@ -43,14 +50,42 @@ class Graph extends JPanel {
 		Math.min(255, barColor.getBlue() + 64)
 	);
 
+	/**
+	 * Stores the information about the bars in the same order they are shown.
+	 */
 	protected Bar[] shownBars;
+	/**
+	 * The width of the bar.
+	 */
 	protected double barWidth;
+	/**
+	 * The width of the space between bars.
+	 */
 	protected double gapWidth;
+	/**
+	 * The starting position of the first bar.
+	 */
 	protected int leftOffset = 0;
+	/**
+	 * The space on the right reserved for displaying the speed labels.
+	 */
 	protected int rightOffset;
+	/**
+	 * Reserved.
+	 */
 	protected int topOffset = 0;
+	/**
+	 * The minimum height of the bar which is equals to the height of the lowest speed label.
+	 */
 	protected int bottomOffset;
 
+	/**
+	 * Creates an instance of Graph.
+	 * @param records array of records to display on the graph. The amount of displayed records depends on the size of the graph.
+	 *                The height precision of the displayed records isn't guaranteed.
+	 * @param width width of the graph
+	 * @param height height of the graph
+	 */
 	Graph(FRecord[] records, int width, int height){
 		setMinimumSize(new Dimension(width, height));
 		setPreferredSize(new Dimension(width, height));
@@ -185,6 +220,12 @@ class Graph extends JPanel {
 		return smearedRecs;
 	}
 
+	/**
+	 * Returns true if the specified coordinates points on the bar, otherwise returns false.
+	 * @param x horizontal position from left to right
+	 * @param y vertical position from up to down
+	 * @return true if the specified coordinates points on the bar or false otherwise
+	 */
 	protected boolean isBar(int x, int y) {
 		if (x < leftOffset || x > getWidth() - rightOffset) return false;
 
@@ -192,12 +233,26 @@ class Graph extends JPanel {
 			y >= shownBars[(int) Math.floor((double) x / (barWidth + gapWidth + leftOffset))].coord().y;
 	}
 
+	/**
+	 * Returns the index of the pointed at bar in {@link Graph#shownBars}.
+	 * If the coordinates don't point at any bar, the method returns a negative value.
+	 * @param x horizontal position from left to right
+	 * @param y vertical position from up to down
+	 * @return index of the pointed at bar
+	 */
 	protected int getBarIndex(int x, int y) {
 		if (!isBar(x, y)) return -1;
 
 		return (int) Math.floor((double) x / (barWidth + gapWidth + leftOffset));
 	}
 
+	/**
+	 * Returns the coordinates of the pointed at bar.
+	 * If the coordinates don't point at any bar, the method returns null.
+	 * @param x horizontal position from left to right
+	 * @param y vertical position from up to down
+	 * @return coordinates of the pointed at bar
+	 */
 	protected Rectangle getBarBorders(int x, int y) {
 		if (!isBar(x, y)) return null;
 
