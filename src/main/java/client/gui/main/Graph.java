@@ -21,25 +21,56 @@ import client.gui.FRecord;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
 
 /**
  * Graph draws the given records. The amount of displayed records is based on the width.
  */
 class Graph extends JPanel {
+	protected record Bar(String time, String speed, Rectangle coord, String info) {}
+
 	private final FRecord[] records;
+	private final Color barColor = Color.red;
+	private final Color barColorBright = new Color(
+		Math.min(255, barColor.getRed() + 64),
+		Math.min(255, barColor.getGreen() + 64),
+		Math.min(255, barColor.getBlue() + 64)
+	);
+
+	protected Bar[] shownBars;
 	protected double barWidth;
 	protected double gapWidth;
 	protected int leftOffset = 0;
 	protected int rightOffset;
 	protected int topOffset = 0;
 	protected int bottomOffset;
+
 	Graph(FRecord[] records, int width, int height){
 		setMinimumSize(new Dimension(width, height));
 		setPreferredSize(new Dimension(width, height));
 		setMaximumSize(new Dimension(width, height));
 		this.records = records;
+		addMouseMotionListener(new MouseAdapter() {
+			@Override
+			public void mouseMoved(MouseEvent e) {
+				Graphics gc = Graph.this.getGraphics();
+				paintComponent(gc);
+				if (isBar(e.getX(), e.getY())) {
+					Rectangle barBorders = getBarBorders(e.getX(), e.getY());
+					gc.setColor(barColorBright);
+					gc.fillRect(barBorders.x, barBorders.y, barBorders.width, barBorders.height);
+
+					Bar bar = shownBars[getBarIndex(e.getX(), e.getY())];
+					showHint(bar, gc, e.getX(), e.getY());
+				}
+			}
+		});
 	}
 
 	@Override
@@ -54,7 +85,7 @@ class Graph extends JPanel {
 		}
 
 		gc.setFont(new Font(Font.SERIF, Font.BOLD, 18));
-
+		bottomOffset = gc.getFontMetrics().getHeight();
 		int barMinWidth = 15;
 		int gapMinWidth = 10;
 		rightOffset = gc.getFontMetrics().stringWidth("   999 Mbit/s");
@@ -77,22 +108,32 @@ class Graph extends JPanel {
 		// for example for maxSpeed 537 highestBar is 600
 		long highestBar = (long) (Math.ceil((double) maxSpeed / maxSpeedExponent) * maxSpeedExponent);
 
-		visibleRecords = Arrays
-			.stream(visibleRecords)
-			.map(r -> new FRecord(r.time(), r.speed() - lowestBar, r.info()))
-			.toArray(FRecord[]::new);
-		double scaleY = (double) getHeight() / (highestBar - lowestBar);
 		drawSpeedBars(gc, lowestBar, highestBar);
 
+		double scaleY = (double) getHeight() / (highestBar - lowestBar);
 		double scaleX = (double) maxSpeedBarsAmount / visibleRecords.length;
+
+		shownBars = new Bar[visibleRecords.length];
 		barWidth = barMinWidth * scaleX;
 		gapWidth = gapMinWidth * scaleX;
-		drawRecordBars(gc, visibleRecords, scaleY);
+		for (int index = 0; index < visibleRecords.length; index++) {
+			FRecord record = visibleRecords[index];
+			int x = (int) ((barWidth + gapWidth) * index);
+			int barHeight = (int) ((record.speed() - lowestBar ) * scaleY) + bottomOffset;
+			int y = getHeight() - barHeight;
+
+			Rectangle coordinates = new Rectangle(x, y, (int) barWidth, barHeight);
+			String time = SimpleDateFormat
+				.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+				.format(new Date(record.time()));
+			String speedHuman = human(record.speed());
+
+			shownBars[index] = new Bar(time, speedHuman, coordinates, record.info());
+		}
+		drawRecordBars(gc, shownBars);
 	}
 
 	private void drawSpeedBars(Graphics gc, long lowestBar, long highestBar) {
-		FontMetrics fm = gc.getFontMetrics();
-		bottomOffset = fm.getHeight();
 		int barAmount = 5;
 		int barWidth = 4;
 		int currentHeight = 0;
@@ -114,13 +155,10 @@ class Graph extends JPanel {
 		}
 	}
 
-	private void drawRecordBars(Graphics gc, FRecord[] records, double scaleY) {
-		gc.setColor(Color.red);
-		for (int recordIndex = 0; recordIndex < records.length; recordIndex++) {
-			int height = (int) (records[recordIndex].speed() * scaleY);
-			int xPos = (int) (recordIndex * barWidth + recordIndex * gapWidth);
-			int yPos = getHeight() - height;
-			gc.fillRect(xPos, yPos, (int) barWidth, height);
+	private void drawRecordBars(Graphics gc, Bar[] bars) {
+		gc.setColor(barColor);
+		for (Bar b: bars) {
+			gc.fillRect(b.coord().x, b.coord().y, b.coord().width, b.coord().height);
 		}
 	}
 
@@ -147,6 +185,25 @@ class Graph extends JPanel {
 		return smearedRecs;
 	}
 
+	protected boolean isBar(int x, int y) {
+		if (x < leftOffset || x > getWidth() - rightOffset) return false;
+
+		return (double) x % (barWidth + gapWidth + leftOffset) <= barWidth &&
+			y >= shownBars[(int) Math.floor((double) x / (barWidth + gapWidth + leftOffset))].coord().y;
+	}
+
+	protected int getBarIndex(int x, int y) {
+		if (!isBar(x, y)) return -1;
+
+		return (int) Math.floor((double) x / (barWidth + gapWidth + leftOffset));
+	}
+
+	protected Rectangle getBarBorders(int x, int y) {
+		if (!isBar(x, y)) return null;
+
+		return shownBars[getBarIndex(x, y)].coord();
+	}
+
 	private String human(long bits) {
 		int siPrefix = 0;
 		while (bits >= 1000) {
@@ -154,5 +211,27 @@ class Graph extends JPanel {
 			siPrefix++;
 		}
 		return bits + " " + " KMG".charAt(siPrefix) + "bits/s";
+	}
+
+	private void showHint(Bar bar, Graphics gc, int x, int y) {
+		String[] lines = new String[] {
+			bar.time(),
+			bar.speed(),
+			bar.info()
+		};
+
+		FontMetrics fm = gc.getFontMetrics();
+		int padH = (int) Arrays.stream(lines).filter(l -> !l.isEmpty()).count() * gc.getFontMetrics().getHeight();
+		int padW = Arrays.stream(lines).mapToInt(fm::stringWidth).max().getAsInt();
+		gc.setColor(new Color(0, 0, 0, 170));
+		gc.fillRect(x, y - padH, padW, padH);
+
+		int lineY = y + gc.getFontMetrics().getHeight() - gc.getFontMetrics().getDescent() - padH;
+		gc.setColor(Color.white);
+		for (String line: lines) {
+			if (line.isEmpty()) continue;
+			gc.drawString(line, x, lineY);
+			lineY += gc.getFontMetrics().getHeight();
+		}
 	}
 }
