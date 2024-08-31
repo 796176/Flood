@@ -111,6 +111,7 @@ class Graph extends JPanel {
 	@Override
 	protected void paintComponent(Graphics gc) {
 		super.paintComponent(gc);
+		((Graphics2D)gc).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
 		if (records.length == 0) {
 			gc.setFont(new Font(Font.SERIF, Font.PLAIN, 30));
