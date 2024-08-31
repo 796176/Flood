@@ -254,7 +254,12 @@ class Graph extends JPanel {
 	 * @return true if the specified coordinates points on the bar or false otherwise
 	 */
 	protected boolean isBar(int x, int y) {
-		if (x < leftOffset || x > getWidth() - rightOffset) return false;
+		if (
+			shownBars == null ||
+			shownBars.length == 0 ||
+			x < leftOffset ||
+			(x > shownBars.length * (barWidth + gapWidth) - gapWidth)
+		) return false;
 
 		return (double) x % (barWidth + gapWidth + leftOffset) <= barWidth &&
 			y >= shownBars[(int) Math.floor((double) x / (barWidth + gapWidth + leftOffset))].coord().y;
