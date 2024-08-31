@@ -30,7 +30,7 @@ import java.io.IOException;
  */
 public class MainFrame extends JFrame {
 	private FRecord[] records = new FRecord[]{};
-	private Container prevGraph;
+	private Graph prevGraph;
 	public MainFrame() {
 		try {
 			setSize(
@@ -63,7 +63,11 @@ public class MainFrame extends JFrame {
 
 		setJMenuBar(new MainFrameMenu(this));
 
-		prevGraph = new JLabel("Use Tools > Update to draw the graph");
+		prevGraph = new Graph(
+			new FRecord[]{},
+			getWidth() - getInsets().right - getInsets().left,
+			getHeight() - getInsets().top - getInsets().bottom - getJMenuBar().getHeight()
+		);
 		add(prevGraph);
 		setVisible(true);
 
@@ -78,6 +82,7 @@ public class MainFrame extends JFrame {
 							getHeight() - getInsets().top - getInsets().bottom - getJMenuBar().getHeight()
 						);
 					prevGraph.setVisible(false);
+					prevGraph.destroy();
 					MainFrame.this.add(newGraph);
 					prevGraph = newGraph;
 					repaint(100);
@@ -117,6 +122,7 @@ public class MainFrame extends JFrame {
 			getWidth() - getInsets().left - getInsets().right,
 			getHeight() - getInsets().top - getInsets().bottom - getJMenuBar().getHeight());
 		prevGraph.setVisible(false);
+		prevGraph.destroy();
 		add(graph);
 		prevGraph = graph;
 		this.records = records;

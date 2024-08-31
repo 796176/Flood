@@ -25,9 +25,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Date;
+import java.util.*;
+import java.util.Timer;
+import java.util.function.Consumer;
 
 /**
  * Graph draws the given records. The amount of displayed records is based on the width.
@@ -42,6 +42,8 @@ class Graph extends JPanel {
 	 */
 	protected record Bar(String time, String speed, Rectangle coord, String info) {}
 
+	private final Timer frameScheduler;
+	private Consumer<Graphics> nextFrame = this::drawMainGraph;
 	private final FRecord[] records;
 	private final Color barColor = Color.red;
 	private final Color barColorBright = new Color(
@@ -94,23 +96,47 @@ class Graph extends JPanel {
 		addMouseMotionListener(new MouseAdapter() {
 			@Override
 			public void mouseMoved(MouseEvent e) {
-				Graphics gc = Graph.this.getGraphics();
-				paintComponent(gc);
 				if (isBar(e.getX(), e.getY())) {
-					Rectangle barBorders = getBarBorders(e.getX(), e.getY());
-					gc.setColor(barColorBright);
-					gc.fillRect(barBorders.x, barBorders.y, barBorders.width, barBorders.height);
+					nextFrame = (graphics) -> {
+						Graph.this.drawMainGraph(graphics);
 
-					Bar bar = shownBars[getBarIndex(e.getX(), e.getY())];
-					showHint(bar, gc, e.getX(), e.getY());
+						Rectangle barBorders = getBarBorders(e.getX(), e.getY());
+						graphics.setColor(barColorBright);
+						graphics.fillRect(barBorders.x, barBorders.y, barBorders.width, barBorders.height);
+						Bar bar = shownBars[getBarIndex(e.getX(), e.getY())];
+						showHint(bar, graphics, e.getX(), e.getY());
+					};
+				} else {
+					nextFrame = Graph.this::drawMainGraph;
 				}
 			}
 		});
+
+		TimerTask timerTask = new TimerTask() {
+			@Override
+			public void run() {
+				Graph.this.repaint();
+			}
+		};
+		frameScheduler = new Timer();
+		frameScheduler.scheduleAtFixedRate(timerTask, 0, (int)Math.floor(1000d / 60));
+	}
+
+	/**
+	 * Stops a thread responsible for rendering Graph.
+	 * The invocation frees the resources allocated during the initialization of Graph.
+	 */
+	public void destroy() {
+		frameScheduler.cancel();
 	}
 
 	@Override
 	protected void paintComponent(Graphics gc) {
 		super.paintComponent(gc);
+		nextFrame.accept(gc);
+	}
+
+	private void drawMainGraph(Graphics gc) {
 		((Graphics2D)gc).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
 		if (records.length == 0) {
@@ -228,7 +254,12 @@ class Graph extends JPanel {
 	 * @return true if the specified coordinates points on the bar or false otherwise
 	 */
 	protected boolean isBar(int x, int y) {
-		if (x < leftOffset || x > getWidth() - rightOffset) return false;
+		if (
+			shownBars == null ||
+			shownBars.length == 0 ||
+			x < leftOffset ||
+			(x > shownBars.length * (barWidth + gapWidth) - gapWidth)
+		) return false;
 
 		return (double) x % (barWidth + gapWidth + leftOffset) <= barWidth &&
 			y >= shownBars[(int) Math.floor((double) x / (barWidth + gapWidth + leftOffset))].coord().y;
@@ -270,6 +301,8 @@ class Graph extends JPanel {
 	}
 
 	private void showHint(Bar bar, Graphics gc, int x, int y) {
+		((Graphics2D)gc).setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
 		String[] lines = new String[] {
 			bar.time(),
 			bar.speed(),
