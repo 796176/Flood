@@ -121,4 +121,82 @@ public abstract class WebServerTests {
 			}
 		}
 	}
+
+	@Nested
+	class RequestRange {
+		Path output;
+		WebServer ws;
+		long rangeStartTime;
+		long rangeEndTime;
+
+		@BeforeEach
+		void beforeEach() throws IOException {
+			output = Files.createTempFile(null, null);
+			ws = getInstance();
+
+			BandwidthStatus bandwidthStatus = new DefaultBandwidthStatus();
+			bandwidthStatus.setOutputDestination(output.toString());
+			rangeStartTime = System.currentTimeMillis();
+			bandwidthStatus.log(1000, "data1");
+			bandwidthStatus.log(1100, "data2");
+			bandwidthStatus.log(1200, "data3");
+			rangeEndTime = System.currentTimeMillis();
+
+			ws.setBandwidthStatus(bandwidthStatus);
+			ws.setPort(54231);
+		}
+
+		@AfterEach
+		void afterEach() throws IOException {
+			Files.delete(output);
+		}
+
+		@Test
+		void sendRegularRequest() throws IOException, InterruptedException {
+			URI uri = URI.create(
+				"http://localhost:54231/%s?s=%d&e=%d"
+					.formatted(RequestType.retrieve_range, rangeStartTime, rangeEndTime)
+			);
+			HttpRequest request =
+				HttpRequest
+					.newBuilder()
+					.timeout(Duration.of(1, ChronoUnit.SECONDS))
+					.uri(uri)
+					.build();
+			ws.start();
+			try (HttpClient client = HttpClient.newHttpClient()) {
+				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+				JSONObject jsonObject = new JSONObject(response.body());
+				JSONArray records = jsonObject.getJSONArray("records");
+				for (Object o: records) {
+					String[] record = new JSONArray(o.toString()).toList().toArray(new String[0]);
+					assertTrue(record[0].matches("\\d+"), "Unix time expected");
+					assertTrue(record[1].matches("1[012]00"), "Bandwidth speed expected");
+					assertTrue(record[2].matches("data[123]"), "Additional info expected");
+				}
+			} finally {
+				ws.interrupt();
+			}
+		}
+
+		@Test
+		void sendCorruptedRequest() throws IOException, InterruptedException {
+			URI uri = URI.create(
+				"http://localhost:54231/%s?e=empty&s=:-(".formatted(RequestType.retrieve_range)
+			);
+			HttpRequest request =
+				HttpRequest
+					.newBuilder()
+					.timeout(Duration.of(1, ChronoUnit.SECONDS))
+					.uri(uri)
+					.build();
+			ws.start();
+			try (HttpClient client = HttpClient.newHttpClient()) {
+				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+				assertEquals(400, response.statusCode());
+			} finally {
+				ws.interrupt();
+			}
+		}
+	}
 }
