@@ -29,5 +29,14 @@ public enum RequestType {
 	 * The example of a request to retrieve all the record for the last 24 hours:<br>
 	 * {@code /retrieve_last?u=10&t=24}
 	 */
-	retrieve_last
+	retrieve_last,
+
+	/**
+	 * retrieve_range is used to request all the records for the specified period of time<br>
+	 * "s" parameter specifies the beginning of the time period in milliseconds since Jan 1st 1970<br>
+	 * "e" parameter specifies the end of the time period in milliseconds since Jan 1st 1970<br>
+	 * The example of a request to retrieve all the records from Jan 1st 1970 00:00:00 to Jan 1st 1970 00:01:00<br>
+	 * {@code /retrieve_range?s=0&e=60000}
+	 */
+	retrieve_range
 }

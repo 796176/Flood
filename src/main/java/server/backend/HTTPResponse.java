@@ -88,6 +88,13 @@ class HTTPResponse extends Thread {
 					String responseBody = new JSONObject().put("records", records).toString();
 					response.append("Content-Length: " + responseBody.length() + "\n\n" + responseBody);
 				}
+				case retrieve_range -> {
+					long start = Long.parseLong(retrieve(params, "s=\\d+").substring("s=".length()));
+					long end = Long.parseLong(retrieve(params, "e=\\d+").substring("e=".length()));
+					LinkedList<String[]> records = bs.collect(start, end);
+					String responseBody = new JSONObject().put("records", records).toString();
+					response.append("Content-Length: " + responseBody.length() + "\n\n" + responseBody);
+				}
 			}
 
 			return response.toString();
