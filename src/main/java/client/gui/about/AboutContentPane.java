@@ -30,7 +30,7 @@ class AboutContentPane extends JScrollPane{
 		JTextArea textArea = new JTextArea(
 			"""
 				Flood
-				Version 0.4.0
+				Version 0.4.1
 				
 				Flood GUI client is a frontend for Flood network inspection tool.
 				
