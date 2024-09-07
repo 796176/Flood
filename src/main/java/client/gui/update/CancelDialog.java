@@ -31,7 +31,7 @@ public class CancelDialog extends JDialog {
 	 * @param parent reference to a parent {@link JFrame}
 	 */
 	public CancelDialog(JFrame parent) {
-		super(parent, "Retrieving", true);
+		super(parent, "Retrieving");
 
 		setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		setSize(800, 400);
@@ -62,5 +62,11 @@ public class CancelDialog extends JDialog {
 	 */
 	public void setRunnableThread(Thread t) {
 		cancelButton.addActionListener(actionEvent -> t.interrupt());
+	}
+
+	@Override
+	public void setVisible(boolean visible) {
+		getOwner().setEnabled(!visible);
+		super.setVisible(visible);
 	}
 }

@@ -25,15 +25,15 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.swing.*;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * UpdateDialog provides the GUI interface to get records from Flood Backend.
@@ -62,58 +62,25 @@ public class UpdateDialog extends JDialog{
 		assert rt != null && params != null;
 
 		CancelDialog cancelDialog = new CancelDialog(parent);
-		Retrieve retrieve = new Retrieve(rt, params, cancelDialog);
-		retrieve.start();
-		cancelDialog.setRunnableThread(retrieve);
-		setVisible(false);
+		GraphUpdater graphUpdater = new GraphUpdater(rt, params, parent, cancelDialog);
+		cancelDialog.setRunnableThread(graphUpdater);
 		cancelDialog.setVisible(true);
-		if (retrieve.isInterrupted()) return;
-
-		if (retrieve.getException() != null) {
-			retrieve.getException().printStackTrace();
-			JOptionPane.showMessageDialog(
-				this,
-				retrieve.getException().getMessage(),
-				retrieve.exception.getClass().getSimpleName(),
-				JOptionPane.ERROR_MESSAGE
-			);
-		} else if (retrieve.getResult().statusCode() != 200) {
-			JOptionPane.showMessageDialog(
-				this,
-				"Server status: " + retrieve.getResult().statusCode(),
-				"NetworkException",
-				JOptionPane.ERROR_MESSAGE
-			);
-		} else {
-			JSONObject object = new JSONObject(retrieve.getResult().body());
-			JSONArray records = object.getJSONArray("records");
-			ArrayList<FRecord> recordsArrayList = new ArrayList<>(1024 * 10);
-			for (int i = 0; i < records.length(); i++) {
-				List<Object> recordList = ((JSONArray) records.get(i)).toList();
-				recordsArrayList.add(new FRecord(
-					Long.parseLong(recordList.get(0).toString()),
-					Long.parseLong(recordList.get(1).toString()),
-					recordList.get(2).toString()
-				));
-			}
-			FRecord[] recordsArray = recordsArrayList.toArray(new FRecord[]{});
-			Arrays.sort(recordsArray);
-			parent.setRecords(recordsArray);
-		}
+		setVisible(false);
+		graphUpdater.start();
 	}
 
-	private static class Retrieve extends Thread {
+	private static class GraphUpdater extends Thread {
 		private final RequestType requestType;
 		private final String parameters;
-		private final JDialog cancelDialog;
-		private HttpResponse<String> result;
-		private Exception exception;
-		private Retrieve(RequestType rt, String params, JDialog cancelDialog) {
-			assert rt != null && params != null && cancelDialog != null;
+		private final MainFrame mf;
+		private final CancelDialog cd;
+		private GraphUpdater(RequestType rt, String params, MainFrame mainFrame, CancelDialog cancelDialog) {
+			assert rt != null && params != null;
 
 			requestType = rt;
 			parameters = params;
-			this.cancelDialog = cancelDialog;
+			mf = mainFrame;
+			cd = cancelDialog;
 		}
 
 		@Override
@@ -129,22 +96,37 @@ public class UpdateDialog extends JDialog{
 				HttpRequest request =
 					HttpRequest.newBuilder().uri(uri).timeout(Duration.of(15, ChronoUnit.SECONDS)).build();
 				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-				result = response;
-			} catch (Exception e) {
-				exception = e;
-			} finally {
+				client.close();
+				if (response.statusCode() != 200)
+					throw new ConnectException("Failed to fetch data. HTTP code: " + response.statusCode());
+
+				FRecord[] records = parseResponseBody(response.body());
 				SwingUtilities.invokeLater(() -> {
-					cancelDialog.setVisible(false);
+					mf.setRecords(records);
+					cd.setVisible(false);
 				});
+			} catch (Exception exception) {
+				cd.setVisible(false);
+				JOptionPane.showMessageDialog(
+					mf,
+					exception.getMessage(),
+					exception.getClass().getSimpleName(),
+					JOptionPane.ERROR_MESSAGE
+				);
 			}
 		}
 
-		private HttpResponse<String> getResult() {
-			return result;
-		}
-
-		private Exception getException() {
-			return exception;
+		private FRecord[] parseResponseBody(String body) {
+			JSONArray jsonArray = new JSONObject(body).getJSONArray("records");
+			Function<JSONArray, FRecord> function = jsonArr ->
+				new FRecord(
+					jsonArr.getLong(0),
+					jsonArr.getLong(1),
+					jsonArr.getString(2)
+				);
+			Stream.Builder<FRecord> stream = Stream.builder();
+			jsonArray.forEach(object -> stream.accept(function.apply((JSONArray) object)));
+			return stream.build().sorted().toArray(FRecord[]::new);
 		}
 	}
 }
