@@ -51,7 +51,24 @@ public class SettingManipulator {
 		/**
 		 * MAIN_WINDOW_WIDTH represents the width of {@link client.gui.main.MainFrame} when it was closed.
 		 */
-		MAIN_WINDOW_WIDTH
+		MAIN_WINDOW_WIDTH,
+
+		/**
+		 * PROXY_PROTOCOL contains the type of proxy protocol to use to access Flood Backend.
+		 * Supported protocols: SOCKS, HTTP.
+		 */
+		PROXY_PROTOCOL,
+
+		/**
+		 * PROXY_URL contains the address of the proxy server.
+		 * It can be represented as an IP address or a domain name.
+		 */
+		PROXY_URL,
+
+		/**
+		 * PROXY_PORT contains the port of proxy server.
+		 */
+		PROXY_PORT
 	}
 
 	private static String configPath = System.getProperty("user.home") + File.separator + ".flood_client";

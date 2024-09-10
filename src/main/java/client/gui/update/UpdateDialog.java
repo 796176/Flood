@@ -25,13 +25,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.swing.*;
-import java.net.ConnectException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+import java.io.IOException;
+import java.net.*;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -86,21 +82,27 @@ public class UpdateDialog extends JDialog{
 		@Override
 		public void run() {
 			try {
-				URI uri = URI.create(
+				URL url = URI.create(
 					SettingManipulator.getValue(SettingManipulator.Parameter.REMOTE_URL).orElse("") +
 					"/" +
 					requestType +
 					parameters
-				);
-				HttpClient client = HttpClient.newBuilder().build();
-				HttpRequest request =
-					HttpRequest.newBuilder().uri(uri).timeout(Duration.of(15, ChronoUnit.SECONDS)).build();
-				HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-				client.close();
-				if (response.statusCode() != 200)
-					throw new ConnectException("Failed to fetch data. HTTP code: " + response.statusCode());
+				).toURL();
+				HttpURLConnection connection = buildConnection(url);
+				connection.getOutputStream().write(buildGetRequest("/" + requestType + parameters).getBytes());
+				int bodySize = connection.getContentLength();
+				if (bodySize == -1)
+					throw new ConnectException("Failed to establish connection");
+				byte[] responseBody = new byte[bodySize];
+				connection.getInputStream().read(responseBody);
+				connection.disconnect();
+				String responseMes = new String(responseBody);
 
-				FRecord[] records = parseResponseBody(response.body());
+				int statusCode = connection.getResponseCode();
+				if (statusCode != 200)
+					throw new ConnectException("Failed to fetch data. HTTP code: " + statusCode);
+
+				FRecord[] records = parseResponseBody(responseMes);
 				SwingUtilities.invokeLater(() -> {
 					mf.setRecords(records);
 					cd.setVisible(false);
@@ -127,6 +129,33 @@ public class UpdateDialog extends JDialog{
 			Stream.Builder<FRecord> stream = Stream.builder();
 			jsonArray.forEach(object -> stream.accept(function.apply((JSONArray) object)));
 			return stream.build().sorted().toArray(FRecord[]::new);
+		}
+
+		private HttpURLConnection buildConnection(URL url) throws IOException {
+			URLConnection urlConnection;
+			Optional<String> proxyType = SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_PROTOCOL);
+			if (proxyType.isPresent()) {
+				SocketAddress address = new InetSocketAddress(
+					SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_URL).get(),
+					Integer.parseInt(SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_PORT).get())
+				);
+				Proxy proxy = new Proxy(Proxy.Type.valueOf(proxyType.get()), address);
+				urlConnection = url.openConnection(proxy);
+			} else {
+				urlConnection = url.openConnection();
+			}
+			urlConnection.setDoOutput(true);
+			urlConnection.setDoInput(true);
+			urlConnection.setConnectTimeout(15_000);
+			urlConnection.connect();
+
+			return (HttpURLConnection) urlConnection;
+		}
+
+		private String buildGetRequest(String request) {
+			return """
+				GET %s HTTP/1.1
+				""".formatted(request);
 		}
 	}
 }

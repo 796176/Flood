@@ -40,11 +40,17 @@ public class SettingManipulatorTests {
 		SettingManipulator.setValue(SettingManipulator.Parameter.MAIN_WINDOW_Y, "200");
 		SettingManipulator.setValue(SettingManipulator.Parameter.MAIN_WINDOW_WIDTH, "300");
 		SettingManipulator.setValue(SettingManipulator.Parameter.MAIN_WINDOW_HEIGHT, "400");
+		SettingManipulator.setValue(SettingManipulator.Parameter.PROXY_PROTOCOL, "SOCKS");
+		SettingManipulator.setValue(SettingManipulator.Parameter.PROXY_URL, "example.com");
+		SettingManipulator.setValue(SettingManipulator.Parameter.PROXY_PORT, "1080");
 
 		assertEquals("http://example.com", SettingManipulator.getValue(SettingManipulator.Parameter.REMOTE_URL).get());
 		assertEquals("100", SettingManipulator.getValue(SettingManipulator.Parameter.MAIN_WINDOW_X).get());
 		assertEquals("200", SettingManipulator.getValue(SettingManipulator.Parameter.MAIN_WINDOW_Y).get());
 		assertEquals("300", SettingManipulator.getValue(SettingManipulator.Parameter.MAIN_WINDOW_WIDTH).get());
 		assertEquals("400", SettingManipulator.getValue(SettingManipulator.Parameter.MAIN_WINDOW_HEIGHT).get());
+		assertEquals("SOCKS", SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_PROTOCOL).get());
+		assertEquals("example.com", SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_URL).get());
+		assertEquals("1080", SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_PORT).get());
 	}
 }
