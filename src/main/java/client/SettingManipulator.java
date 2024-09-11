@@ -75,7 +75,8 @@ public class SettingManipulator {
 
 	/**
 	 * Returns the string representation of the property according to the parameter.
-	 * The available parameters are values of {@link SettingManipulator.Parameter}.
+	 * The available parameters are values of {@link SettingManipulator.Parameter}.<br>
+	 * If the parameter was previously assigned an empty string, an empty optional will be returned.
 	 * @param par parameter
 	 * @return property or an empty optional if the property is absent
 	 * @throws IOException if an I/O error occurs
@@ -90,7 +91,9 @@ public class SettingManipulator {
 			String line;
 			while ((line = br.readLine()) != null) {
 				if (line.startsWith(par.toString())) {
-					return Optional.of(line.substring(line.indexOf("\t") + 1));
+					String value = line.substring(line.indexOf("\t") + 1);
+					if (!value.isEmpty())
+						return Optional.of(value);
 				}
 			}
 			return Optional.empty();
@@ -99,7 +102,8 @@ public class SettingManipulator {
 
 	/**
 	 * Sets the property and the parameter.
-	 * The available parameters are values of {@link SettingManipulator.Parameter}.
+	 * The available parameters are values of {@link SettingManipulator.Parameter}.<br>
+	 * Setting an empty value is tantamount to removing it.
 	 * @param par parameter
 	 * @param val string representation of the property
 	 * @throws IOException if an I/O error occurs
