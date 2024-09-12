@@ -26,7 +26,6 @@ import java.nio.CharBuffer;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -89,28 +88,22 @@ public class SettingLoader {
 		    br.read(buffer);
 			buffer.flip();
 		} catch (IOException ignored) {}
-		Pattern parPattern = Pattern.compile(par.toLowerCase() + "[\t ]+");
-		Matcher conMatcher = parPattern.matcher(buffer.toString().toLowerCase());
-		if (!conMatcher.find()) {
-			Field[] fields = DefaultSettings.class.getFields();
-			Optional<Field> field =
-				Arrays.stream(fields).filter(f -> f.getName().compareToIgnoreCase(par) == 0).findFirst();
-			try {
-				return Optional.of(field.get().get(null).toString());
-			} catch (NoSuchElementException | IllegalAccessException exception) {
-				return Optional.empty();
-			}
-		}
 		String settingConfig = buffer.toString();
+		Optional<String> configLine = settingConfig
+			.lines()
+			.filter(line -> Pattern.compile("(?i)^" + par + "[ \t]").matcher(line).find())
+			.findFirst();
+		if (configLine.isPresent())
+			return Optional.of(configLine.get().split("[ \t]+")[1]);
 
-		int beginIndex = conMatcher.end();
-		int endIndex = settingConfig.indexOf(System.lineSeparator(), beginIndex);
-		if (endIndex == -1) endIndex = settingConfig.length();
-		return Optional.of(
-			buffer
-				.toString()
-				.substring(beginIndex, endIndex)
-		);
+		Field[] fields = DefaultSettings.class.getFields();
+		Optional<Field> field =
+			Arrays.stream(fields).filter(f -> f.getName().compareToIgnoreCase(par) == 0).findFirst();
+		try {
+			return Optional.of(field.get().get(null).toString());
+		} catch (NoSuchElementException | IllegalAccessException exception) {
+			return Optional.empty();
+		}
 	}
 
 	/**
