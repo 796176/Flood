@@ -57,12 +57,15 @@ abstract public class DownloadTestTests {
 		}
 
 		@Test
-		void download() {
+		void download() throws InterruptedException {
 			HTTP200Response webServer = new HTTP200Response(54231, "i have no idea what to write");
 			webServer.start();
 
 			DownloadTest downloadTest = getInstance();
 			downloadTest.toTimerTask().run();
+			webServer.interrupt();
+			webServer.join();
+
 			assertEquals(1, webServer.getAcceptedConnections());
 			assertNull(downloadTest.getException());
 
