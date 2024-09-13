@@ -118,7 +118,7 @@ public class SettingLoader {
 			Arrays.stream(fields).filter(f -> f.getName().compareToIgnoreCase(par) == 0).findFirst();
 		try {
 			return Optional.of(field.get().get(null).toString());
-		} catch (NoSuchElementException | IllegalAccessException exception) {
+		} catch (NoSuchElementException | IllegalAccessException | NullPointerException exception) {
 			return Optional.empty();
 		}
 	}
