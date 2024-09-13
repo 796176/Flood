@@ -31,4 +31,7 @@ public class DefaultSettings {
 	public final static int PORT = 53333;
 	public final static String OUTPUT_DESTINATION = System.getProperty("user.home") + File.separator + "flood";
 	public final static int MAX_THREADS = 8;
+	public final static String PROXY_PROTOCOL = null;
+	public final static String PROXY_URL = null;
+	public final static String PROXY_PORT = null;
 }

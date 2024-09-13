@@ -64,6 +64,23 @@ public class SettingLoader {
 	 */
 	public final static String MAX_THREADS = "MAX_THREADS";
 
+	/**
+	 * PROXY_PROTOCOL contains the type of proxy protocol to use to access Flood Backend.
+	 * Supported protocols: SOCKS, HTTP.
+	 */
+	public final static String PROXY_PROTOCOL = "PROXY_PROTOCOL";
+
+	/**
+	 * PROXY_URL contains the address of the proxy server.
+	 * It can be represented as an IP address or a domain name.
+	 */
+	public final static String PROXY_URL = "PROXY_URL";
+
+	/**
+	 * PROXY_PORT contains the port of proxy server.
+	 */
+	public final static String PROXY_PORT = "PROXY_PORT";
+
 	private static String configPath = System.getProperty("user.home") + File.separator + ".flood_settings";
 	private SettingLoader() {}
 
