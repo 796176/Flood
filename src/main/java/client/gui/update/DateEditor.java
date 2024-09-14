@@ -56,7 +56,6 @@ public class DateEditor extends JSpinner.DefaultEditor {
 					getTextField().setCaretPosition(caret + 1);
 				} else if (e.getKeyChar() == '\n') {
 					spinner.getModel().setValue(text.toString());
-					System.out.println(spinner);
 					getTextField().setText(spinner.getModel().getValue().toString());
 				}
 			}
