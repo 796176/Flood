@@ -66,6 +66,9 @@ class HTTPResponse extends Thread {
 			try {
 				clientSocket.getOutputStream().write(response.getBytes());
 			} catch (IOException ignored) {}
+			try {
+				clientSocket.close();
+			} catch (IOException ignored) {}
 		}
 	}
 
