@@ -114,6 +114,10 @@ abstract public class DownloadTestTests {
 				webServer.interrupt();
 				webServer.join();
 
+				assertNull(downloadTest.getException(), () -> {
+					downloadTest.getException().printStackTrace();
+					return "Receiving or recording has failed";
+				});
 				assertEquals(1, httpProxy.getAcceptedConnections(), "The proxy wasn't reached");
 				assertEquals(1, webServer.getAcceptedConnections(), "The web server wasn't reached");
 			}
