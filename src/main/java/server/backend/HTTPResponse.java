@@ -29,7 +29,7 @@ import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class HTTPResponse extends Thread {
+class HTTPResponse implements Runnable {
 	private final Socket clientSocket;
 	private final BandwidthStatus bs;
 
