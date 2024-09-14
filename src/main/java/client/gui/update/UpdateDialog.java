@@ -26,6 +26,8 @@ import org.json.JSONObject;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.*;
 import java.util.Optional;
 import java.util.function.Function;
@@ -81,6 +83,7 @@ public class UpdateDialog extends JDialog{
 
 		@Override
 		public void run() {
+			HttpURLConnection connection = null;
 			try {
 				URL url = URI.create(
 					SettingManipulator.getValue(SettingManipulator.Parameter.REMOTE_URL).orElse("") +
@@ -88,14 +91,17 @@ public class UpdateDialog extends JDialog{
 					requestType +
 					parameters
 				).toURL();
-				HttpURLConnection connection = buildConnection(url);
-				connection.getOutputStream().write(buildGetRequest("/" + requestType + parameters).getBytes());
+				connection = buildConnection(url);
+				try (OutputStream os = connection.getOutputStream()) {
+					os.write(buildGetRequest("/" + requestType + parameters).getBytes());
+				}
 				int bodySize = connection.getContentLength();
 				if (bodySize == -1)
 					throw new ConnectException("Failed to establish connection");
 				byte[] responseBody = new byte[bodySize];
-				connection.getInputStream().read(responseBody);
-				connection.disconnect();
+				try (InputStream is = connection.getInputStream()) {
+					is.read(responseBody);
+				}
 				String responseMes = new String(responseBody);
 
 				int statusCode = connection.getResponseCode();
@@ -115,6 +121,9 @@ public class UpdateDialog extends JDialog{
 					exception.getClass().getSimpleName(),
 					JOptionPane.ERROR_MESSAGE
 				);
+			}
+			finally {
+				if (connection != null) connection.disconnect();
 			}
 		}
 
