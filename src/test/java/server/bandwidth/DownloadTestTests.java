@@ -14,7 +14,7 @@ abstract public class DownloadTestTests {
 
 	@Test
 	void timerTaskCast() {
-		assertNotEquals(null, getInstance().toTimerTask());
+		assertNotNull(getInstance().toTimerTask());
 	}
 
 	@Test
@@ -66,8 +66,11 @@ abstract public class DownloadTestTests {
 			webServer.interrupt();
 			webServer.join();
 
-			assertEquals(1, webServer.getAcceptedConnections());
-			assertNull(downloadTest.getException());
+			assertEquals(1, webServer.getAcceptedConnections(), "The server hasn't been reached");
+			assertNull(downloadTest.getException(), () -> {
+				downloadTest.getException().printStackTrace();
+				return "Receiving or recording has failed";
+			});
 		}
 
 		@Nested
@@ -118,8 +121,8 @@ abstract public class DownloadTestTests {
 					downloadTest.getException().printStackTrace();
 					return "Receiving or recording has failed";
 				});
-				assertEquals(1, httpProxy.getAcceptedConnections(), "The proxy wasn't reached");
-				assertEquals(1, webServer.getAcceptedConnections(), "The web server wasn't reached");
+				assertEquals(1, httpProxy.getAcceptedConnections(), "The proxy hasn't been reached");
+				assertEquals(1, webServer.getAcceptedConnections(), "The web server hasn't been reached");
 			}
 		}
 	}
