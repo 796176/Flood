@@ -55,10 +55,12 @@ abstract public class FloodSchedulerTests {
 		scheduler.execute();
 		int acceptedConnections = webServer.getAcceptedConnections();
 		Thread.sleep(3000);
-		scheduler.stopExecution();
-		assertTrue(acceptedConnections < webServer.getAcceptedConnections());
 
+		scheduler.stopExecution();
 		webServer.interrupt();
+		webServer.join();
+
+		assertTrue(acceptedConnections < webServer.getAcceptedConnections());
 	}
 
 	@AfterEach

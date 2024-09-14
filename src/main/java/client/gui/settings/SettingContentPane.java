@@ -30,6 +30,9 @@ import java.io.IOException;
  */
 class SettingContentPane extends Container {
 	private JTextField connectionTextField;
+	private JTextField proxyProtocolTextField;
+	private JTextField proxyURLTextField;
+	private JTextField proxyPortTextField;
 	SettingsDialog sd;
 	SettingContentPane(SettingsDialog settingsDialog) {
 		assert settingsDialog != null;
@@ -38,7 +41,8 @@ class SettingContentPane extends Container {
 		try {
 			BoxLayout bl = new BoxLayout(this, BoxLayout.Y_AXIS);
 			setLayout(bl);
-			Component sep = Box.createRigidArea(new Dimension(0, 10));
+			Dimension elementOffset = new Dimension(0, 10);
+			Dimension groupOffset = new Dimension(0, 40);
 
 			JLabel connectionLabel = new JLabel("Remote host:");
 			connectionLabel.setMaximumSize(connectionLabel.getMinimumSize());
@@ -46,7 +50,7 @@ class SettingContentPane extends Container {
 			connectionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 			add(connectionLabel);
 
-			add(sep);
+			add(Box.createRigidArea(elementOffset));
 
 			connectionTextField =
 				new JTextField(SettingManipulator.getValue(SettingManipulator.Parameter.REMOTE_URL).orElse(""));
@@ -55,8 +59,61 @@ class SettingContentPane extends Container {
 			connectionTextField.setAlignmentX(Component.LEFT_ALIGNMENT);
 			add(connectionTextField);
 
-			sep = Box.createRigidArea(new Dimension(0, 50));
-			add(sep);
+			add(Box.createRigidArea(groupOffset));
+
+			JLabel proxyProtocolLabel = new JLabel("Proxy protocol:");
+			proxyProtocolLabel.setMaximumSize(proxyProtocolLabel.getMinimumSize());
+			proxyProtocolLabel.setPreferredSize(proxyProtocolLabel.getMinimumSize());
+			proxyProtocolLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+			add(proxyProtocolLabel);
+
+			add(Box.createRigidArea(elementOffset));
+
+			proxyProtocolTextField = new JTextField();
+			proxyProtocolTextField
+				.setText(SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_PROTOCOL).orElse(""));
+			proxyProtocolTextField
+				.setMaximumSize(new Dimension(Integer.MAX_VALUE, proxyProtocolTextField.getMinimumSize().height));
+			proxyProtocolTextField.setAlignmentX(Component.LEFT_ALIGNMENT);
+			add(proxyProtocolTextField);
+
+			add(Box.createRigidArea(elementOffset));
+
+			JLabel proxyURLLabel = new JLabel("Proxy URL:");
+			proxyURLLabel.setMaximumSize(proxyURLLabel.getMinimumSize());
+			proxyURLLabel.setPreferredSize(proxyURLLabel.getMinimumSize());
+			proxyURLLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+			add(proxyURLLabel);
+
+			add(Box.createRigidArea(elementOffset));
+
+			proxyURLTextField = new JTextField();
+			proxyURLTextField
+				.setText(SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_URL).orElse(""));
+			proxyURLTextField
+				.setMaximumSize(new Dimension(Integer.MAX_VALUE, proxyURLTextField.getMinimumSize().height));
+			proxyURLTextField.setAlignmentX(Component.LEFT_ALIGNMENT);
+			add(proxyURLTextField);
+
+			add(Box.createRigidArea(elementOffset));
+
+			JLabel proxyPortLabel = new JLabel("Proxy port");
+			proxyPortLabel.setMaximumSize(proxyPortLabel.getMinimumSize());
+			proxyPortLabel.setPreferredSize(proxyPortLabel.getMinimumSize());
+			proxyPortLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+			add(proxyPortLabel);
+
+			add(Box.createRigidArea(elementOffset));
+
+			proxyPortTextField = new JTextField();
+			proxyPortTextField
+				.setText(SettingManipulator.getValue(SettingManipulator.Parameter.PROXY_PORT).orElse(""));
+			proxyPortTextField
+				.setMaximumSize(new Dimension(Integer.MAX_VALUE, proxyPortTextField.getMinimumSize().height));
+			proxyPortTextField.setAlignmentX(Component.LEFT_ALIGNMENT);
+			add(proxyPortTextField);
+
+			add(Box.createRigidArea(groupOffset));
 
 			JPanel saveButtonPad = new JPanel();
 			saveButtonPad.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -80,6 +137,9 @@ class SettingContentPane extends Container {
 		public void actionPerformed(ActionEvent actionEvent) {
 			try {
 				SettingManipulator.setValue(SettingManipulator.Parameter.REMOTE_URL, connectionTextField.getText());
+				SettingManipulator.setValue(SettingManipulator.Parameter.PROXY_PROTOCOL, proxyProtocolTextField.getText());
+				SettingManipulator.setValue(SettingManipulator.Parameter.PROXY_URL, proxyURLTextField.getText());
+				SettingManipulator.setValue(SettingManipulator.Parameter.PROXY_PORT, proxyPortTextField.getText());
 			} catch (IOException exception) {
 				JOptionPane.showMessageDialog(
 					SettingContentPane.this,

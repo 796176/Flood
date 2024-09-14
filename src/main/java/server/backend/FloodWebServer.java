@@ -24,7 +24,9 @@ import server.bandwidth.DefaultBandwidthStatus;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * FloodWebServer is a default implementation of {@link WebServer} interface.
@@ -36,22 +38,25 @@ import java.util.Arrays;
 public class FloodWebServer extends Thread implements WebServer {
 	private boolean interrupted = false;
 	private int port;
-	private final HTTPResponse[] threads;
+	private final ExecutorService threadPool;
 	private BandwidthStatus bs;
 
 	public FloodWebServer() {
 		bs = new DefaultBandwidthStatus();
 		port = Integer.parseInt(SettingLoader.getValue(SettingLoader.Parameter.PORT));
-		threads = new HTTPResponse[Integer.parseInt(SettingLoader.getValue(SettingLoader.Parameter.MAX_THREADS))];
-		Arrays.fill(threads, new HTTPResponse(bs, new Socket()));
+		int availableThreadAmount = Integer.parseInt(SettingLoader.getValue(SettingLoader.Parameter.MAX_THREADS));
+		threadPool = Executors.newFixedThreadPool(availableThreadAmount);
 	}
 
 	@Override
 	public void run() {
 		try (ServerSocket socket = new ServerSocket(port)) {
+			socket.setSoTimeout(100);
 			while (!interrupted) {
-				Socket client = socket.accept();
-				processSocket(client);
+				try {
+					Socket client = socket.accept();
+					processSocket(client);
+				} catch (Exception ignored) {}
 			}
 		} catch (IOException ignored) { }
 	}
@@ -59,11 +64,10 @@ public class FloodWebServer extends Thread implements WebServer {
 	@Override
 	public void interrupt() {
 		interrupted = true;
+		threadPool.shutdownNow();
 		try {
-			for (HTTPResponse t : threads) {
-				t.join(1000);
-			}
-			super.interrupt();
+			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+			join();
 		} catch (InterruptedException ignored) {}
 	}
 
@@ -90,27 +94,8 @@ public class FloodWebServer extends Thread implements WebServer {
 		bs = bandwidthStatus;
 	}
 
-	private int getAvailableThreadIndex() {
-		long waitTime = 500;
-		long startTime = System.currentTimeMillis();
-		while (System.currentTimeMillis() - startTime < waitTime) {
-			for (int index = 0; index < threads.length; index++) {
-				if (!threads[index].isAlive()) return index;
-			}
-		}
-		return -1;
-	}
-
 	private void processSocket(Socket socket) {
-		int availableThreadIndex = getAvailableThreadIndex();
-		if (availableThreadIndex < 0) {
-			try {
-				socket.getOutputStream().write(DefaultHTTPResponses._503.getBytes());
-			} catch (IOException ignored) {}
-		} else {
-			threads[availableThreadIndex] = new HTTPResponse(bs, socket);
-			threads[availableThreadIndex].start();
-		}
+		threadPool.execute(new HTTPResponse(bs, socket));
 	}
 
 	public static void main(String[] args) throws InterruptedException {

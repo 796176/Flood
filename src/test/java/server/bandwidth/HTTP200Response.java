@@ -20,20 +20,23 @@ public class HTTP200Response extends Thread{
 	@Override
 	public void run() {
 		try (ServerSocket serverSocket = new ServerSocket(port)) {
+			serverSocket.setSoTimeout(100);
 			while (!interrupted) {
-				Socket clientSocket = serverSocket.accept();
-				acceptCount++;
-				String mes =
-					"HTTP/1.1 200 OK\n" +
-					"Content-Length: " + payload.length() + "\n" +
-					"\n" +
-					payload;
-				clientSocket.getOutputStream().write(mes.getBytes());
+				try (Socket clientSocket = serverSocket.accept()) {
+					acceptCount++;
+					String mes =
+						"HTTP/1.1 200 OK\n" +
+							"Content-Length: " + payload.length() + "\n" +
+							"\n" +
+							payload;
+					clientSocket.getOutputStream().write(mes.getBytes());
+				} catch (Exception ignored) {}
 			}
 		} catch (IOException ignored) {}
 	}
 
-	public void interrupt(){
+	@Override
+	public void interrupt() {
 		interrupted = true;
 	}
 
