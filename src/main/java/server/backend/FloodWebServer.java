@@ -51,9 +51,12 @@ public class FloodWebServer extends Thread implements WebServer {
 	@Override
 	public void run() {
 		try (ServerSocket socket = new ServerSocket(port)) {
+			socket.setSoTimeout(100);
 			while (!interrupted) {
-				Socket client = socket.accept();
-				processSocket(client);
+				try {
+					Socket client = socket.accept();
+					processSocket(client);
+				} catch (Exception ignored) {}
 			}
 		} catch (IOException ignored) { }
 	}
@@ -64,6 +67,7 @@ public class FloodWebServer extends Thread implements WebServer {
 		threadPool.shutdownNow();
 		try {
 			threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+			join();
 		} catch (InterruptedException ignored) {}
 	}
 
