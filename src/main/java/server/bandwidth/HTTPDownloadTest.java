@@ -18,16 +18,11 @@
 package server.bandwidth;
 
 import global.SettingLoader;
+import server.ProxySettings;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+import java.io.OutputStream;
+import java.net.*;
 import java.util.TimerTask;
 
 /**
@@ -47,31 +42,45 @@ public class HTTPDownloadTest extends TimerTask implements DownloadTest {
 
 	@Override
 	public void run() {
-		HttpClient client = HttpClient
-			.newBuilder()
-			.connectTimeout(Duration.of(20, ChronoUnit.SECONDS))
-			.followRedirects(HttpClient.Redirect.ALWAYS)
-			.build();
-		HttpRequest request = HttpRequest.newBuilder().GET().uri(uri).build();
-		Path tmpFile = Path.of("~" + System.currentTimeMillis());
-		long timeToDownload;
+		HttpURLConnection connection = null;
 		try {
+			connection = buildConnection(uri.toURL());
+			String query = uri.getRawQuery() == null ? "" : "?" + uri.getRawQuery();
+			String getMes = buildGetRequest(uri.getRawPath() + query);
+
 			long startTime = System.currentTimeMillis() / 1000;
-			HttpResponse<Path> response = client.send(request, HttpResponse.BodyHandlers.ofFile(tmpFile));
-			timeToDownload = System.currentTimeMillis() / 1000 - startTime;
+			try (OutputStream os = connection.getOutputStream()) {
+				os.write(getMes.getBytes());
+			}
+			long timeToDownload = System.currentTimeMillis() / 1000 - startTime;
+
+			if (connection.getResponseCode() != 200) return;
+			long responseBodySize = connection.getContentLengthLong();
 			if (timeToDownload == 0) timeToDownload++;
-			bs.log(Files.size(tmpFile) * 8 / timeToDownload, "download_speed");
-		} catch (InterruptedException | IOException exception) {
+			bs.log(responseBodySize * 8 / timeToDownload, "download_speed");
+		} catch (IOException exception) {
 			e = exception;
 		}
 		finally {
-			try {
-				Files.delete(tmpFile);
-			} catch (IOException exception) {
-				e = exception;
-			}
+			if (connection != null) connection.disconnect();
 		}
 
+	}
+
+	private HttpURLConnection buildConnection(URL url) throws IOException {
+		URLConnection urlConnection = url.openConnection(ProxySettings.getProxy());
+		urlConnection.setDoInput(true);
+		urlConnection.setDoOutput(true);
+		urlConnection.setConnectTimeout(60_000);
+		urlConnection.connect();
+
+		return (HttpURLConnection) urlConnection;
+	}
+
+	private String buildGetRequest(String request) {
+		return """
+			GET %s HTTP/1.1
+			""".formatted(request);
 	}
 
 	@Override

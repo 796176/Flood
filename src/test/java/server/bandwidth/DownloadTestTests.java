@@ -68,8 +68,55 @@ abstract public class DownloadTestTests {
 
 			assertEquals(1, webServer.getAcceptedConnections());
 			assertNull(downloadTest.getException());
+		}
 
-			webServer.interrupt();
+		@Nested
+		class WithProxyEnabled {
+			StringBuilder currentConfig = new StringBuilder();
+			int proxyPort = 12345;
+
+			@BeforeEach
+			void beforeEach() throws IOException {
+				try (FileReader fr = new FileReader(newConfigFile.toString())) {
+					int c;
+					while ((c = fr.read()) != -1) {
+						currentConfig.append(Character.toString(c));
+					}
+				}
+
+				try (FileWriter fw = new FileWriter(newConfigFile.toString(), true)) {
+					fw.write("\n");
+					fw.write(SettingLoader.PROXY_PROTOCOL + " HTTP\n");
+					fw.write(SettingLoader.PROXY_URL + " localhost\n");
+					fw.write(SettingLoader.PROXY_PORT + " " + proxyPort);
+				}
+			}
+
+			@AfterEach
+			void afterEach() throws IOException {
+				try (FileWriter fw = new FileWriter(newConfigFile.toString())){
+					fw.write(currentConfig.toString());
+				}
+			}
+
+			@Test
+			void download() throws InterruptedException {
+				HTTP200Response webServer = new HTTP200Response(54231, "my body is ready");
+				webServer.start();
+				HttpProxy httpProxy = new HttpProxy(proxyPort);
+				httpProxy.start();
+
+				DownloadTest downloadTest = getInstance();
+				downloadTest.toTimerTask().run();
+
+				httpProxy.interrupt();
+				httpProxy.join();
+				webServer.interrupt();
+				webServer.join();
+
+				assertEquals(1, httpProxy.getAcceptedConnections(), "The proxy wasn't reached");
+				assertEquals(1, webServer.getAcceptedConnections(), "The web server wasn't reached");
+			}
 		}
 	}
 }
